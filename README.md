@@ -6,12 +6,13 @@ Grab via Gradle:
 compile 'com.batzeesappstudio.pocketsignatureview:pocketsignatureview:0.1.2'
 
 or Maven:
-
+<pre>
 <dependency> 
   <groupId>com.batzeesappstudio.pocketsignatureview</groupId> 
   <artifactId>pocketsignatureview</artifactId> 
   <version>0.1.2</version> 
   <type>pom</type> 
 </dependency>
+</pre>
 
-Snapshots of the development version are coming soon
+Snapshots of the development version are available at "http://oss.jfrog.org/oss-snapshot-local/com/batzeesappstudio/pocketsignatureview/"
