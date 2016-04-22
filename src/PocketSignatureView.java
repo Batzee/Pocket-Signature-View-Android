@@ -16,7 +16,6 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import java.io.File;
@@ -27,21 +26,18 @@ import java.util.ArrayList;
 
 /**
  * Created by Amalan Dhananjayan on 4/19/2016.
+ * v0.1.2
  */
 public class PocketSignatureView extends View {
 
-    private Context viewContext;
-    private DisplayMetrics displayMetrics;
     private Path path;
     private Paint paint;
     private PocketSignatureSettings settings;
     private ArrayList<Path> pathContainer;
-    private WindowManager windowManager;
     private Canvas bitmapCanvas;
     private RectF signatureBoundRect;
     private Bitmap mBitmap;
 
-    private int orientationState;
     private int strokeColor;
     private int backgroundColor;
     private int paddingSize;
@@ -70,9 +66,6 @@ public class PocketSignatureView extends View {
     public PocketSignatureView(Context context) {
         super(context);
 
-        viewContext = context;
-        windowManager = (WindowManager) viewContext.getSystemService(Context.WINDOW_SERVICE);
-
         initializeVariables();
         calculateRatioForOrientation();
         InitializelayoutProperties();
@@ -83,12 +76,10 @@ public class PocketSignatureView extends View {
         settings = new PocketSignatureSettings();
         initializeSignatureSettings();
         pathContainer = new ArrayList<>();
-        displayMetrics = new DisplayMetrics();
-        windowManager.getDefaultDisplay().getMetrics(displayMetrics);
         path = new Path();
         paint = new Paint();
         vectorStringData = "";
-        screenWidth = (displayMetrics.widthPixels);
+        screenWidth = (getResources().getDisplayMetrics().widthPixels);
         scalePointX = 0;
         scalePointY = 0;
         pathContainerOpen = true;
@@ -96,7 +87,6 @@ public class PocketSignatureView extends View {
         autoTouchtriggered = false;
         pathContainerInUse = false;
         clearingCanvas = false;
-        orientationState = getResources().getConfiguration().orientation;
         signatureStrokeWidth = (int) settings.getSTROKE_WIDTH();
         strokeColor = settings.getSTROKE_COLOR();
         backgroundColor = settings.getBACKGROUND_COLOR();
@@ -114,7 +104,7 @@ public class PocketSignatureView extends View {
     }
 
     private void calculateRatioForOrientation() {
-        if (orientationState == 2) {
+        if (getResources().getConfiguration().orientation == 2) {
             landscapeRatio();
         } else {
             widthRatio = 1;
@@ -149,10 +139,10 @@ public class PocketSignatureView extends View {
         signatureFilePath = imageFoldePath;
         String filename;
 
-        if (!imageName.equals("")) {
-            filename = imageName + ".svg";
-        } else {
+        if (imageName == null || imageName.isEmpty()) {
             filename = "signatureImage.svg";
+        } else {
+            filename = imageName + ".svg";
         }
 
         if (checkAndCreateFolder(imageFoldePath)) {
@@ -192,15 +182,14 @@ public class PocketSignatureView extends View {
     public void saveSignatureAsBitmap(String imageFilePath, String imageName) {
         View view = PocketSignatureView.this;
         if (mBitmap == null) {
-            mBitmap = createBitmap(view);
+            mBitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.RGB_565);
         }
-
-        String filename = imageName + ".png";
-        File destinationFile = new File(imageFilePath, filename);
-
+        else{
+            mBitmap.recycle();
+        }
         bitmapCanvas = new Canvas(mBitmap);
         try {
-            FileOutputStream mFileOutStream = new FileOutputStream(destinationFile.getPath());
+            FileOutputStream mFileOutStream = new FileOutputStream(new File(imageFilePath, imageName + ".png").getPath());
             view.draw(bitmapCanvas);
             mBitmap.compress(Bitmap.CompressFormat.PNG, 90, mFileOutStream);
             mFileOutStream.flush();
@@ -212,10 +201,6 @@ public class PocketSignatureView extends View {
         }
     }
 
-    private Bitmap createBitmap(View vContent) {
-        return mBitmap = Bitmap.createBitmap(vContent.getWidth(), vContent.getHeight(), Bitmap.Config.RGB_565);
-    }
-
     public void clear() {
         pathContainerOpen = false;
         pathContainerInUse = true;
@@ -225,6 +210,7 @@ public class PocketSignatureView extends View {
     }
 
     private void landscapeRatio() {
+        DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
         screenWidth = (displayMetrics.widthPixels);
         previousWidth = (displayMetrics.heightPixels);
     }
@@ -233,7 +219,7 @@ public class PocketSignatureView extends View {
         File dest = new File(folderPath);
         if (!dest.exists()) {
             if (dest.mkdir()) {
-                Toast.makeText(viewContext, "Folder Created", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Folder Created", Toast.LENGTH_SHORT).show();
                 return true;
             } else {
                 Log.d("PocketSignatureView_Log", "Could not Create the Folder");
@@ -244,6 +230,7 @@ public class PocketSignatureView extends View {
         }
     }
 
+    // TODO : use  A xml parser -> much safer
     private void createPathFromVectorString() {
 
         pathContainer = new ArrayList<>();
@@ -288,7 +275,7 @@ public class PocketSignatureView extends View {
         super.onDraw(canvas);
 
         //On Landscape the draw has to be magnified
-        if (orientationState == 2) {
+        if (getResources().getConfiguration().orientation == 2) {
             float ratioWidth = screenWidth / previousWidth;
             canvas.scale(ratioWidth, ratioWidth, scalePointX, scalePointY);
             canvas.translate(newPositionOfX, newPositionOfY);
@@ -323,18 +310,16 @@ public class PocketSignatureView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-
         touchReleased = false;
-
         float eventX;
         float eventY;
         if (previousWidth != 0.0) {
             widthRatio = (screenWidth / previousWidth);
         }
-        if (orientationState == 2) {
+
+        if (getResources().getConfiguration().orientation == 2) {
             float x = (event.getX()) / widthRatio;
             float y = (event.getY()) / widthRatio;
-
             eventX = x - newPositionOfX;
             eventY = y - newPositionOfY;
         }
@@ -349,7 +334,6 @@ public class PocketSignatureView extends View {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     path.moveTo(eventX, eventY);
-
                     if (!autoTouchtriggered) {
                         if (vectorStringData.contains("M")) {
                             vectorStringData += " \" fill=\"none\" stroke=\"black\" stroke-width=\"1\"/>\n\"  <path d=\"";
@@ -365,26 +349,20 @@ public class PocketSignatureView extends View {
                 case MotionEvent.ACTION_MOVE:
 
                 case MotionEvent.ACTION_UP:
-
                     resetSignatureBoundRect(eventX, eventY);
                     int historySize = event.getHistorySize();
 
                     float historicalX;
                     float historicalY;
-
                     for (int i = 0; i < historySize; i++) {
-
-                        if (orientationState == 2) {
-
+                        if (getResources().getConfiguration().orientation == 2) {
                             historicalX = (event.getHistoricalX(i) / widthRatio) - newPositionOfX;
                             historicalY = (event.getHistoricalY(i) / widthRatio) - newPositionOfY;
-
                             vectorStringData += " L " + event.getHistoricalX(i) / (widthRatio) + " " + event.getHistoricalY(i) / (widthRatio);
                         }
                         else {
                             historicalX = (event.getHistoricalX(i)) - newPositionOfX;
                             historicalY = (event.getHistoricalY(i)) - newPositionOfY;
-
                             vectorStringData += " L " + event.getHistoricalX(i) + " " + event.getHistoricalY(i);
                         }
                         expandSignatureBoundRect(historicalX, historicalY);
@@ -420,7 +398,6 @@ public class PocketSignatureView extends View {
         String svgStart = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + screenWidth + "\" height=\"" + screenWidth / 2 + "\" version=\"1.1\">\n" + "  <path d=\"";
         String svgEnd = "\" fill=\"none\" stroke=\"black\" stroke-width=\"1\"/>\n" + "</svg>";
         String resultSVG = svgStart + pathData + svgEnd;
-
         try {
             File root = new File(signatureFilePath);
             if (!root.exists()) {
@@ -462,8 +439,8 @@ public class PocketSignatureView extends View {
         long eventTime = SystemClock.uptimeMillis() + 100;
         float x = 0.0f;
         float y = 0.0f;
-
         int metaState = 0;
+
         MotionEvent motionEvent = MotionEvent.obtain(
                 downTime,
                 eventTime,
@@ -479,8 +456,8 @@ public class PocketSignatureView extends View {
     public Parcelable onSaveInstanceState() {
         Bundle bundle = new Bundle();
         bundle.putParcelable("superState", super.onSaveInstanceState());
-        bundle.putFloat("PreviousWidth", screenWidth);
-        bundle.putString("Vectordata", vectorStringData);
+        bundle.putFloat("previousWidth", screenWidth);
+        bundle.putString("vectorStringData", vectorStringData);
         return bundle;
     }
 
@@ -489,12 +466,11 @@ public class PocketSignatureView extends View {
         if (state instanceof Bundle) {
             Bundle bundle = (Bundle) state;
             state = bundle.getParcelable("superState");
-            previousWidth = bundle.getFloat("PreviousWidth", screenWidth);
-            orientationState = getResources().getConfiguration().orientation;
-            if (orientationState == 2) {
+            previousWidth = bundle.getFloat("previousWidth", screenWidth);
+            if (getResources().getConfiguration().orientation == 2) {
                 landscapeRatio();
             }
-            vectorStringData = bundle.getString("Vectordata");
+            vectorStringData = bundle.getString("vectorStringData");
             loadVectoreImage(vectorStringData);
         }
         super.onRestoreInstanceState(state);
