@@ -26,7 +26,7 @@ import java.util.ArrayList;
 
 /**
  * Created by Amalan Dhananjayan on 4/19/2016.
- * v0.1.2
+ * v0.1.3
  */
 public class PocketSignatureView extends View {
 

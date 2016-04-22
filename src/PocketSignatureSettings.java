@@ -4,6 +4,7 @@ import android.graphics.Paint;
 
 /**
  * Created by Amalan Dhananjayan on 4/19/2016.
+ v0.1.3
  */
 public class PocketSignatureSettings {
 
