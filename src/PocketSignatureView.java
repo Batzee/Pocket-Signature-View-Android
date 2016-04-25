@@ -32,16 +32,18 @@ public class PocketSignatureView extends View {
 
     private Path path;
     private Paint paint;
-    private PocketSignatureSettings settings;
     private ArrayList<Path> pathContainer;
     private Canvas bitmapCanvas;
     private RectF signatureBoundRect;
     private Bitmap mBitmap;
 
+    //View Properties
     private int strokeColor;
-    private int backgroundColor;
-    private int paddingSize;
-    private int signatureStrokeWidth;
+    private int canvasColor;
+    private int strokeWidth;
+    public Paint.Style strokeStyle;
+    public boolean strokeAntiAlias;
+    public Paint.Join strokeJoin;
 
     private float lastTouchX;
     private float lastTouchY;
@@ -73,7 +75,6 @@ public class PocketSignatureView extends View {
     }
 
     private void initializeVariables() {
-        settings = new PocketSignatureSettings();
         initializeSignatureSettings();
         pathContainer = new ArrayList<>();
         path = new Path();
@@ -87,20 +88,16 @@ public class PocketSignatureView extends View {
         autoTouchtriggered = false;
         pathContainerInUse = false;
         clearingCanvas = false;
-        signatureStrokeWidth = (int) settings.getSTROKE_WIDTH();
-        strokeColor = settings.getSTROKE_COLOR();
-        backgroundColor = settings.getBACKGROUND_COLOR();
-        paddingSize = settings.getPADDING_AROUND();
     }
 
     private void initializeSignatureSettings() {
-        settings.setSTOKE_STYLE(Paint.Style.STROKE);
-        settings.setSTROKE_ANTI_ALIAS(true);
-        settings.setSTROKE_WIDTH(5f);
-        settings.setSTROKE_COLOR(Color.BLACK);
-        settings.setSTROKE_JOIN(Paint.Join.ROUND);
-        settings.setPADDING_AROUND(50);
-        settings.setBACKGROUND_COLOR(Color.parseColor("#9dd6d6"));
+
+        strokeColor = Color.BLACK;
+        canvasColor = Color.parseColor("#9dd6d6");
+        strokeWidth = (int) 5f;
+        strokeStyle = Paint.Style.STROKE;
+        strokeAntiAlias = true;
+        strokeJoin = Paint.Join.ROUND;
     }
 
     private void calculateRatioForOrientation() {
@@ -113,26 +110,16 @@ public class PocketSignatureView extends View {
 
     private void InitializelayoutProperties() {
         signatureBoundRect = new RectF(0, 0, screenWidth, screenWidth / 2);
-        setBackgroundColor(backgroundColor);
+        setBackgroundColor(canvasColor);
     }
 
     private void InitializePaint() {
-        paint.setAntiAlias(settings.isSTROKE_ANTI_ALIAS());
-        paint.setColor(settings.getSTROKE_COLOR());
-        paint.setStyle(settings.getSTOKE_STYLE());
-        paint.setStrokeJoin(settings.getSTROKE_JOIN());
-        paint.setStrokeWidth(settings.getSTROKE_WIDTH());
+        paint.setAntiAlias(strokeAntiAlias);
+        paint.setColor(strokeColor);
+        paint.setStyle(strokeStyle);
+        paint.setStrokeJoin(strokeJoin);
+        paint.setStrokeWidth(strokeWidth);
     }
-
-    //Works only for JellyBeans and Up
-    /*
-    public void drawSignature(String imagePath) {
-        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
-        bmOptions.inMutable = true;
-        Bitmap drawnbitmap = BitmapFactory.decodeFile(imagePath, bmOptions);
-        //this.setBackground(new BitmapDrawable(getResources(), drawnbitmap));
-    }
-    */
 
     public void saveVectorImage(String imageFoldePath, String imageName) {
 
@@ -176,6 +163,7 @@ public class PocketSignatureView extends View {
     }
 
     public String getPathDataString() {
+
         return vectorStringData;
     }
 
@@ -195,6 +183,7 @@ public class PocketSignatureView extends View {
             mFileOutStream.flush();
             mFileOutStream.close();
             String url = MediaStore.Images.Media.insertImage(getContext().getContentResolver(), mBitmap, "title", null);
+            mBitmap.recycle();
             Log.v("PocketSignatureView_Log", "url: " + url);
         } catch (Exception e) {
             Log.v("PocketSignatureView_Log", e.toString());
@@ -382,10 +371,10 @@ public class PocketSignatureView extends View {
 
         touchReleased = true;
 
-        invalidate((int) (signatureBoundRect.left - (signatureStrokeWidth / 2)),
-                (int) (signatureBoundRect.top - (signatureStrokeWidth / 2)),
-                (int) (signatureBoundRect.right + (signatureStrokeWidth / 2)),
-                (int) (signatureBoundRect.bottom + (signatureStrokeWidth / 2)));
+        invalidate((int) (signatureBoundRect.left - (strokeWidth / 2)),
+                (int) (signatureBoundRect.top - (strokeWidth / 2)),
+                (int) (signatureBoundRect.right + (strokeWidth / 2)),
+                (int) (signatureBoundRect.bottom + (strokeWidth / 2)));
 
         lastTouchX = eventX;
         lastTouchY = eventY;
@@ -474,5 +463,34 @@ public class PocketSignatureView extends View {
             loadVectoreImage(vectorStringData);
         }
         super.onRestoreInstanceState(state);
+    }
+
+    public void setStrokeColor(int strokeColor) {
+        this.strokeColor = strokeColor;
+        paint.setColor(strokeColor);
+    }
+
+    public void setCanvasColor(int canvasColor) {
+        this.canvasColor = canvasColor;
+    }
+
+    public void setStrokeWidth(int strokeWidth) {
+        this.strokeWidth = strokeWidth;
+        paint.setStrokeWidth(strokeWidth);
+    }
+
+    public void setStrokeStyle(Paint.Style strokeStyle) {
+        this.strokeStyle = strokeStyle;
+        paint.setStyle(strokeStyle);
+    }
+
+    public void setStrokeAntiAlias(boolean strokeAntiAlias) {
+        this.strokeAntiAlias = strokeAntiAlias;
+        paint.setAntiAlias(strokeAntiAlias);
+    }
+
+    public void setStrokeJoin(Paint.Join strokeJoin) {
+        this.strokeJoin = strokeJoin;
+        paint.setStrokeJoin(strokeJoin);
     }
 }
