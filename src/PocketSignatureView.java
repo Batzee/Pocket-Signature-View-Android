@@ -18,15 +18,24 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
 
+import org.xml.sax.InputSource;
+import org.xml.sax.XMLReader;
+
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.List;
+
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 
 /**
  * Created by Amalan Dhananjayan on 4/19/2016.
- * v0.1.3
+ * v0.1.5
  */
 public class PocketSignatureView extends View {
 
@@ -64,6 +73,8 @@ public class PocketSignatureView extends View {
     private boolean clearingCanvas;
     private boolean autoTouchtriggered;
     private boolean touchReleased;
+
+    String svgEnd = "\" fill=\"none\" stroke=\"black\" stroke-width=\"1\"/></svg>";
 
     public PocketSignatureView(Context context) {
         super(context);
@@ -172,9 +183,7 @@ public class PocketSignatureView extends View {
         if (mBitmap == null) {
             mBitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.RGB_565);
         }
-        else{
-            mBitmap.recycle();
-        }
+
         bitmapCanvas = new Canvas(mBitmap);
         try {
             FileOutputStream mFileOutStream = new FileOutputStream(new File(imageFilePath, imageName + ".png").getPath());
@@ -226,22 +235,22 @@ public class PocketSignatureView extends View {
         String tempStringStore;
 
         //every path starts with 'M' so we split by them to get all the paths serparated
-        String[] pathArray = vectorStringData.split("M");
+        //String[] pathArray = vectorStringData.split("M");
 
-        for (int x = 1; x < pathArray.length; x++) {
-            if (x == pathArray.length - 1) {
-                tempStringStore = pathArray[x];
+        List<String> pathArray =  new ArrayList<>();
+        pathArray = parsedPathList(createModifiedString(vectorStringData));
+
+        for (int x = 0; x < pathArray.size(); x++) {
+            if (x == pathArray.size() - 1) {
+                tempStringStore = pathArray.get(x);
             } else {
-                tempStringStore = pathArray[x].substring(0, pathArray[x].length() - 60);
+                tempStringStore = pathArray.get(x).substring(0, pathArray.get(x).length() - 60);
             }
-
             //every corrdinates in Path starts with 'L' so we split by them to get all the coordinates serparated
             String[] arrayOfCoOrdinates = tempStringStore.split(" L ");
-
             Path newPath = new Path();
 
             for (int y = 0; y < arrayOfCoOrdinates.length; y++) {
-
                 //each coordinate's X and Y points are separated by empty spaces
                 String[] xY = arrayOfCoOrdinates[y].split(" ");
                 if (y == 0) {
@@ -257,6 +266,24 @@ public class PocketSignatureView extends View {
             pathContainer.add(newPath);
         }
         loadVectoreImage();
+    }
+
+    private String createModifiedString(String toModifyString){
+        String stringValue = toModifyString;
+
+        String svgStart = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + screenWidth + "\" height=\"" + screenWidth / 2 + "\" version=\"1.1\">\n" + "  <path d=\"";
+
+        if(!stringValue.contains("<svg")) {
+            stringValue = svgStart + stringValue;
+        }
+        if(!stringValue.contains("</svg>")) {
+            stringValue = stringValue + svgEnd;
+        }
+        else {
+            stringValue = stringValue.replaceAll(svgEnd,"");
+            stringValue = stringValue + svgEnd;
+        }
+        return  stringValue;
     }
 
     @Override
@@ -328,7 +355,10 @@ public class PocketSignatureView extends View {
                             vectorStringData += " \" fill=\"none\" stroke=\"black\" stroke-width=\"1\"/>\n\"  <path d=\"";
                             vectorStringData += "M " + eventX + " " + eventY;
                         } else {
-                            vectorStringData = "M " + eventX + " " + eventY;
+                            if(vectorStringData.contains(svgEnd)) {
+                                vectorStringData = vectorStringData.replaceAll(svgEnd, "");
+                            }
+                                vectorStringData = "M " + eventX + " " + eventY;
                         }
                     }
                     lastTouchX = eventX;
@@ -383,10 +413,24 @@ public class PocketSignatureView extends View {
     }
 
     private void createSVG(String pathData) {
-
         String svgStart = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + screenWidth + "\" height=\"" + screenWidth / 2 + "\" version=\"1.1\">\n" + "  <path d=\"";
-        String svgEnd = "\" fill=\"none\" stroke=\"black\" stroke-width=\"1\"/>\n" + "</svg>";
-        String resultSVG = svgStart + pathData + svgEnd;
+        String resultSVG;
+        if(pathData.contains("<svg")){
+            resultSVG = pathData;
+        }
+        else{
+            resultSVG = svgStart + pathData;
+        }
+        if(resultSVG.contains(svgEnd)){
+            resultSVG.replaceAll(svgEnd,"");
+            if(!resultSVG.contains(svgEnd)){
+              resultSVG =resultSVG + svgEnd;
+            }
+        }
+        else {
+
+            resultSVG =resultSVG + svgEnd;
+        }
         try {
             File root = new File(signatureFilePath);
             if (!root.exists()) {
@@ -463,6 +507,30 @@ public class PocketSignatureView extends View {
             loadVectoreImage(vectorStringData);
         }
         super.onRestoreInstanceState(state);
+    }
+
+    private List<String> parsedPathList(String rawXml){
+        List<String> pathList = null;
+
+        vectorStringData = rawXml;
+        BufferedReader br=new BufferedReader(new StringReader(vectorStringData));
+        InputSource is=new InputSource(br);
+
+        try {
+            XMLParser parser = new XMLParser();
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            SAXParser sp = factory.newSAXParser();
+            XMLReader reader = sp.getXMLReader();
+            reader.setContentHandler(parser);
+            reader.parse(is);
+
+            pathList=parser.list;
+        }
+        catch (Exception ex){
+            Log.d("XML Parser Exception", ex.toString());
+        }
+
+        return pathList;
     }
 
     public void setStrokeColor(int strokeColor) {
