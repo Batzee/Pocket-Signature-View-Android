@@ -3,7 +3,7 @@ This is an Android View Class, which can be used like a Signature Pad. Here the 
 
 Grab via Gradle:
 
-compile 'com.batzeesappstudio.pocketsignatureview:pocketsignatureview:0.1.5'
+compile 'com.batzeesappstudio.pocketsignatureview:pocketsignatureview:0.1.6'
 
 or Maven:
 
@@ -11,7 +11,7 @@ or Maven:
 <dependency> 
   <groupId>com.batzeesappstudio.pocketsignatureview</groupId> 
   <artifactId>pocketsignatureview</artifactId> 
-  <version>0.1.5</version> 
+  <version>0.1.6</version> 
   <type>pom</type> 
 </dependency>
 ```
